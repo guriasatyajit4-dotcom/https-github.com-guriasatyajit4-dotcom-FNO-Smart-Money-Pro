@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101827">
+<title>F&O Smart Money Pro</title>
+<style>
+:root{--bg:#0b1220;--card:#111c2e;--line:#26364d;--text:#edf4ff;--muted:#a9bad1;--green:#16c784;--red:#ff5b68;--gold:#f4bd50;--blue:#67b7ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans Bengali",sans-serif}
+header{padding:20px 16px;background:linear-gradient(135deg,#172944,#101827);border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:22px}header p{margin:7px 0 0;color:var(--muted);font-size:13px}
+main{max-width:900px;margin:auto;padding:14px;display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px}
+h2{font-size:16px;margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+label{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}
+input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;background:#0b1423;color:var(--text);font:inherit}
+button{border:0;border-radius:10px;padding:12px 14px;background:var(--blue);color:#07111e;font-weight:800;font-size:14px;cursor:pointer;width:100%;margin-top:12px}
+.note{font-size:12px;color:var(--muted);line-height:1.55}
+.status{padding:14px;border-radius:12px;text-align:center;background:#0b1423;border:1px solid var(--line)}
+.signal{font-size:27px;font-weight:900;margin:3px 0}.buy{color:var(--green)}.sell{color:var(--red)}.wait{color:var(--gold)}
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.metric{padding:10px;border-radius:9px;background:#0b1423}.metric span{display:block;font-size:11px;color:var(--muted)}.metric strong{font-size:15px;overflow-wrap:anywhere}
+.pill{display:inline-block;padding:4px 8px;border-radius:20px;background:#24344a;color:var(--muted);font-size:11px;margin:3px}
+footer{padding:0 16px 20px;color:var(--muted);font-size:11px;text-align:center}
+@media(min-width:700px){main{grid-template-columns:1fr 1fr}.wide{grid-column:1/-1}.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header>
+<h1>F&O SMART MONEY PRO</h1>
+<p>EMA 9/20 • RSI • Volume • Futures OI • Smart Money • Delta/Theta/Gamma/Vega</p>
+</header>
+<main>
+<section class="card">
+<h2>১. মার্কেট ডেটা ইনপুট</h2>
+<div class="grid">
+<div><label>ইনস্ট্রুমেন্ট</label><select id="symbol"><option>NIFTY Futures</option><option>BANK NIFTY Futures</option></select></div>
+<div><label>টাইমফ্রেম</label><select id="tf"><option>5 মিনিট</option><option>15 মিনিট</option><option>ডেমো</option></select></div>
+<div><label>বর্তমান দাম (₹)</label><input id="price" type="number" step="0.05" placeholder="যেমন 24500"></div>
+<div><label>EMA 9</label><input id="ema9" type="number" step="0.01" placeholder="EMA 9"></div>
+<div><label>EMA 20</label><input id="ema20" type="number" step="0.01" placeholder="EMA 20"></div>
+<div><label>RSI (0–100)</label><input id="rsi" type="number" min="0" max="100" step="0.1" placeholder="যেমন 58"></div>
+<div><label>বর্তমান Volume</label><input id="volume" type="number" min="0" placeholder="বর্তমান volume"></div>
+<div><label>গড় Volume</label><input id="avgVolume" type="number" min="0" placeholder="২০ candle-এর গড়"></div>
+<div><label>Futures OI (বর্তমান)</label><input id="oiNow" type="number" min="0" placeholder="বর্তমান OI"></div>
+<div><label>Futures OI (আগের)</label><input id="oiPrev" type="number" min="0" placeholder="আগের candle-এর OI"></div>
+<div><label>আগের দাম (₹)</label><input id="prevPrice" type="number" step="0.05" placeholder="আগের candle-এর দাম"></div>
+<div><label>সিগন্যালের অতিরিক্ত নিশ্চিতকরণ</label><select id="confirm"><option value="none">কোনওটি নয়</option><option value="bullDiv">Bullish RSI Divergence</option><option value="bearDiv">Bearish RSI Divergence</option><option value="bullSMC">Bullish BOS / Liquidity Sweep</option><option value="bearSMC">Bearish BOS / Liquidity Sweep</option></select></div>
+</div>
+<button id="analyze">সিগন্যাল বিশ্লেষণ করুন</button>
+<p class="note">ডেটা নিজে লিখুন। এই API-বিহীন সংস্করণ বাজার থেকে স্বয়ংক্রিয়ভাবে live price/OI সংগ্রহ করে না। RSI Divergence ও Smart Money নিশ্চিতকরণ এখানে ব্যবহারকারী নির্বাচন করেন; এগুলি স্বয়ংক্রিয়ভাবে চার্ট থেকে শনাক্ত করা হচ্ছে না।</p>
+</section>
+<section class="card wide">
+<h2>২. Groww API — Live Futures Quote</h2>
+<div class="grid">
+<div><label>Groww Access Token (শুধু নিজের ফোনে দিন)</label><input id="apiToken" type="password" autocomplete="off" placeholder="Access Token"></div>
+<div><label>Futures Trading Symbol</label><input id="tradingSymbol" type="text" placeholder="Groww instruments CSV-এর symbol"></div>
+</div>
+<button id="fetchLive">Live Futures Quote আনুন</button>
+<p id="apiStatus" class="note">API token এখানে স্থায়ীভাবে সংরক্ষণ করা হয় না।</p>
+<p class="note">এই সংযোগ Futures quote আনে। Options Greeks-এর জন্য নিচের Options ইনপুটে option-specific তথ্য দিতে হবে; এই quote নিজে option chain বা IV সরবরাহ করছে না।</p>
+</section>
+<section class="card wide">
+<h2>৩. Options Greeks Calculator — Delta • Theta • Gamma • Vega</h2>
+<div class="grid">
+<div><label>Underlying Spot Price (₹)</label><input id="gSpot" type="number" min="0" step="0.05" placeholder="NIFTY/BANK NIFTY spot"></div>
+<div><label>Option Type</label><select id="gType"><option value="call">CALL (CE)</option><option value="put">PUT (PE)</option></select></div>
+<div><label>Strike Price (₹)</label><input id="gStrike" type="number" min="0" step="50" placeholder="যেমন 25000"></div>
+<div><label>Option Premium (₹, ঐচ্ছিক)</label><input id="gPremium" type="number" min="0" step="0.05" placeholder="বাজারের premium"></div>
+<div><label>Expiry পর্যন্ত দিন</label><input id="gDays" type="number" min="0.01" step="0.5" placeholder="যেমন 3"></div>
+<div><label>Implied Volatility (IV %)</label><input id="gIv" type="number" min="0.1" max="500" step="0.1" placeholder="যেমন 15"></div>
+<div><label>Risk-free rate (%)</label><input id="gRate" type="number" min="0" max="30" step="0.1" value="6.5"></div>
+</div>
+<button id="calcGreeks">Greeks হিসাব করুন</button>
+<div class="metrics">
+<div class="metric"><span>Delta (প্রতি ১ পয়েন্ট underlying)</span><strong id="gDelta">—</strong></div>
+<div class="metric"><span>Gamma</span><strong id="gGamma">—</strong></div>
+<div class="metric"><span>Theta (প্রতি দিন, ₹ আনুমানিক)</span><strong id="gTheta">—</strong></div>
+<div class="metric"><span>Vega (IV ১% পয়েন্টে)</span><strong id="gVega">—</strong></div>
+<div class="metric"><span>Black–Scholes theoretical premium</span><strong id="gTheo">—</strong></div>
+<div class="metric"><span>Premium বনাম theoretical</span><strong id="gPremState">—</strong></div>
+</div>
+<p id="gNote" class="note">IV, expiry ও strike সঠিকভাবে দিন। Greeks আনুমানিক এবং Black–Scholes model-ভিত্তিক; বাজারের প্রকৃত Greeks-এর সঙ্গে পার্থক্য হতে পারে।</p>
+</section>
+<section class="card">
+<h2>২. সিগন্যাল ফলাফল</h2>
+<div class="status">
+<div class="note">বর্তমান বিশ্লেষণ</div>
+<div id="signal" class="signal wait">WAIT</div>
+<div id="reason" class="note">ডেটা লিখে বিশ্লেষণ করুন।</div>
+</div>
+<div class="metrics">
+<div class="metric"><span>Price + OI অবস্থান</span><strong id="oiType">—</strong></div>
+<div class="metric"><span>Trend</span><strong id="trend">—</strong></div>
+<div class="metric"><span>Volume</span><strong id="volState">—</strong></div>
+<div class="metric"><span>Entry reference</span><strong id="entry">—</strong></div>
+<div class="metric"><span>Stop Loss reference</span><strong id="sl">—</strong></div>
+<div class="metric"><span>Target 1 / Target 2</span><strong id="targets">—</strong></div>
+</div>
+<p id="risknote" class="note">স্টপ লস ও টার্গেট দেখানো হলে তা কেবল শিক্ষামূলক আনুমানিক হিসাব, নিশ্চিত ট্রেড নির্দেশ নয়।</p>
+</section>
+<section class="card wide">
+<h2>৪. ₹৫০,০০০ মূলধনের Risk Management</h2>
+<div class="grid">
+<div><label>মোট মূলধন (₹)</label><input id="capital" type="number" value="50000" min="1"></div>
+<div><label>প্রতি ট্রেডে ঝুঁকি (%)</label><input id="riskPct" type="number" value="1" min="0.1" max="5" step="0.1"></div>
+</div>
+<div class="metrics">
+<div class="metric"><span>প্রতি ট্রেডে সর্বোচ্চ পরিকল্পিত ঝুঁকি</span><strong id="riskAmt">₹500</strong></div>
+<div class="metric"><span>OI পরিবর্তন</span><strong id="oiChange">—</strong></div>
+<div class="metric"><span>সতর্কতা</span><strong>অটো অর্ডার নেই</strong></div>
+</div>
+<p class="note">OI হলো open contracts-এর সংখ্যা; OI বৃদ্ধি নিজে bullish বা bearish নিশ্চিত করে না। Futures price ও OI একসঙ্গে দেখে সম্ভাব্য build-up বোঝা হয়। Entry/SL/Target কেবল underlying price-এর আনুমানিক রেফারেন্স; অপশন প্রিমিয়াম, lot size, slippage ও charges আলাদা।</p>
+</section>
+</main>
+<footer>শিক্ষামূলক টুল • Groww API quote + manual Options Greeks • লাভের নিশ্চয়তা নেই • সিদ্ধান্ত নেওয়ার আগে নিজে যাচাই করুন</footer>
+<script>
+const $=id=>document.getElementById(id);
+const num=id=>{const v=parseFloat($(id).value);return Number.isFinite(v)?v:null};
+function fmt(v){return v===null||!Number.isFinite(v)?"—":"₹"+v.toLocaleString("en-IN",{maximumFractionDigits:2,minimumFractionDigits:2})}
+function analyze(){
+ const p=num('price'),e9=num('ema9'),e20=num('ema20'),r=num('rsi'),v=num('volume'),av=num('avgVolume'),on=num('oiNow'),op=num('oiPrev'),pp=num('prevPrice');
+ const missing=[['বর্তমান দাম',p],['EMA 9',e9],['EMA 20',e20],['RSI',r],['বর্তমান Volume',v],['গড় Volume',av],['বর্তমান OI',on],['আগের OI',op],['আগের দাম',pp]].filter(x=>x[1]===null).map(x=>x[0]);
+ if(missing.length){$('signal').textContent='WAIT';$('signal').className='signal wait';$('reason').textContent='এই তথ্যগুলি পূরণ করুন: '+missing.join(', ');return}
+ const oiUp=on>op,oiDown=on<op,priceUp=p>pp,priceDown=p<pp;
+ let oiType='OI অপরিবর্তিত';
+ if(oiUp&&priceUp)oiType='সম্ভাব্য Long Build-up';
+ else if(oiUp&&priceDown)oiType='সম্ভাব্য Short Build-up';
+ else if(oiDown&&priceUp)oiType='সম্ভাব্য Short Covering';
+ else if(oiDown&&priceDown)oiType='সম্ভাব্য Long Unwinding';
+ const bull=e9>e20&&r>=55&&v>av&&oiUp&&priceUp;
+ const bear=e9<e20&&r<=45&&v>av&&oiUp&&priceDown;
+ const c=$('confirm').value;
+ const confirmBull=c==='bullDiv'||c==='bullSMC',confirmBear=c==='bearDiv'||c==='bearSMC';
+ let sig='WAIT',cls='signal wait',why='সব শর্ত একসঙ্গে মেলেনি; নতুন ডেটা যাচাই করুন।';
+ if(bull&&c!=='bearDiv'&&c!=='bearSMC'){sig='BUY SETUP';cls='signal buy';why='EMA/RSI/Volume এবং price+OI bullish শর্ত মিলেছে। নিশ্চিতকরণ: '+(confirmBull?'নির্বাচিত bullish confirmation':'অতিরিক্ত confirmation নির্বাচন করা হয়নি')+'.'}
+ else if(bear&&c!=='bullDiv'&&c!=='bullSMC'){sig='SELL SETUP';cls='signal sell';why='EMA/RSI/Volume এবং price+OI bearish শর্ত মিলেছে। নিশ্চিতকরণ: '+(confirmBear?'নির্বাচিত bearish confirmation':'অতিরিক্ত confirmation নির্বাচন করা হয়নি')+'.'}
+ $('signal').textContent=sig;$('signal').className=cls;$('reason').textContent=why;
+ $('oiType').textContent=oiType;$('trend').textContent=e9>e20?'Bullish':e9<e20?'Bearish':'Neutral';$('volState').textContent=v>av?'গড়ের উপরে':v<av?'গড়ের নিচে':'গড়ের সমান';$('oiChange').textContent=(on-op).toLocaleString('en-IN')+' ('+(op?((on-op)/op*100).toFixed(2)+'%':'—')+')';
+ const slPct=0.005, t1=0.01,t2=0.02;
+ if(sig==='BUY SETUP'){$('entry').textContent=fmt(p);$('sl').textContent=fmt(p*(1-slPct));$('targets').textContent=fmt(p*(1+t1))+' / '+fmt(p*(1+t2))}
+ else if(sig==='SELL SETUP'){$('entry').textContent=fmt(p);$('sl').textContent=fmt(p*(1+slPct));$('targets').textContent=fmt(p*(1-t1))+' / '+fmt(p*(1-t2))}
+ else {$('entry').textContent=fmt(p);$('sl').textContent='—';$('targets').textContent='—'}
+ const cap=num('capital')||50000,rp=num('riskPct')||1;$('riskAmt').textContent=fmt(cap*rp/100);
+}
+$('analyze').addEventListener('click',analyze);
+$('capital').addEventListener('input',()=>{const c=num('capital')||50000,r=num('riskPct')||1;$('riskAmt').textContent=fmt(c*r/100)});
+
+$('riskPct').addEventListener('input',()=>{const c=num('capital')||50000,r=num('riskPct')||1;$('riskAmt').textContent=fmt(c*r/100)});
+
+// Black-Scholes Greeks: assumes European option, continuous rates, no dividends.
+function normPdf(x){return Math.exp(-0.5*x*x)/Math.sqrt(2*Math.PI)}
+function normCdf(x){
+ const a=Math.abs(x),t=1/(1+0.2316419*a);
+ const d=normPdf(a)*(0.319381530*t-0.356563782*t*t+1.781477937*Math.pow(t,3)-1.821255978*Math.pow(t,4)+1.330274429*Math.pow(t,5));
+ return x>=0?1-d:d;
+}
+function calcGreeks(){
+ const S=num('gSpot'),K=num('gStrike'),days=num('gDays'),iv=num('gIv'),rate=(num('gRate')??6.5)/100,kind=$('gType').value,prem=num('gPremium');
+ const missing=[['Spot price',S],['Strike',K],['expiry days',days],['IV',iv]].filter(x=>x[1]===null||x[1]<=0).map(x=>x[0]);
+ if(missing.length){$('gNote').textContent='এই তথ্যগুলি সঠিকভাবে পূরণ করুন: '+missing.join(', ')+'.';return}
+ const T=days/365,sigma=iv/100,sqrtT=Math.sqrt(T),d1=(Math.log(S/K)+(rate+0.5*sigma*sigma)*T)/(sigma*sqrtT),d2=d1-sigma*sqrtT;
+ const pdf=normPdf(d1),disc=Math.exp(-rate*T);
+ let delta,theta,price;
+ const gamma=pdf/(S*sigma*sqrtT),vega=S*pdf*sqrtT/100;
+ if(kind==='call'){
+  delta=normCdf(d1);price=S*normCdf(d1)-K*disc*normCdf(d2);
+  theta=(-(S*pdf*sigma)/(2*sqrtT)-rate*K*disc*normCdf(d2))/365;
+ } else {
+  delta=normCdf(d1)-1;price=K*disc*normCdf(-d2)-S*normCdf(-d1);
+  theta=(-(S*pdf*sigma)/(2*sqrtT)+rate*K*disc*normCdf(-d2))/365;
+ }
+ $('gDelta').textContent=delta.toFixed(4);$('gGamma').textContent=gamma.toFixed(6);$('gTheta').textContent='₹'+theta.toFixed(4);$('gVega').textContent='₹'+vega.toFixed(4);$('gTheo').textContent='₹'+price.toFixed(2);
+ $('gPremState').textContent=prem===null?'Premium দিলে তুলনা দেখাবে':(prem>price?'বাজার premium মডেল দামের চেয়ে বেশি':prem<price?'বাজার premium মডেল দামের চেয়ে কম':'প্রায় সমান');
+ $('gNote').textContent='হিসাব সম্পন্ন। '+(kind==='call'?'Call Delta সাধারণত 0 থেকে 1':'Put Delta সাধারণত -1 থেকে 0')+'। Theta সাধারণত সময়ের সঙ্গে premium ক্ষয় বোঝায়। এই ফলাফল live option-chain data নয়; IV ও expiry ভুল হলে ফলও ভুল হবে।';
+}
+$('calcGreeks').addEventListener('click',calcGreeks);
+$('gSpot').addEventListener('input',()=>{const s=num('gSpot');if(s!==null)$('price').value=s;});
+
+
+function setApiStatus(msg, ok=false){ const el=$('apiStatus'); if(el){el.textContent=msg;el.style.color=ok?'#16c784':'#f4bd50';} }
+window.onGrowwQuote = function(raw){
+ try {
+   const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+   if(data.error){setApiStatus('API error: '+data.error);return;}
+   const payload = data.payload || data;
+   const price = payload.last_price ?? payload.ltp ?? payload.price;
+   const oi = payload.open_interest;
+   const prevOi = payload.previous_open_interest;
+   const vol = payload.volume;
+   if(price != null) $('price').value=price;
+   if(oi != null) $('oiNow').value=oi;
+   if(prevOi != null) $('oiPrev').value=prevOi;
+   if(vol != null) $('volume').value=vol;
+   setApiStatus('Live quote এসেছে। EMA 9, EMA 20, RSI, গড় Volume এবং আগের দাম পূরণ করে তারপর বিশ্লেষণ করুন।', true);
+ } catch(e){setApiStatus('Quote response পড়া যায়নি: '+e.message);}
+};
+$('fetchLive').addEventListener('click',()=>{
+ const token=$('apiToken').value.trim();
+ const symbol=$('tradingSymbol').value.trim();
+ if(!token || !symbol){setApiStatus('Access Token এবং Futures Trading Symbol পূরণ করুন।');return;}
+ if(!window.AndroidGroww || !AndroidGroww.fetchQuote){setApiStatus('এই ফিচার Android অ্যাপের ভিতরে কাজ করবে, সাধারণ browser-এ নয়।');return;}
+ setApiStatus('Groww API-তে অনুরোধ পাঠানো হচ্ছে…');
+ AndroidGroww.fetchQuote(token, symbol);
+});
+</script>
+</body></html>
